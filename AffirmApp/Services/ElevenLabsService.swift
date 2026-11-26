@@ -9,6 +9,7 @@ enum ElevenLabsError: Error {
 /// ElevenLabs text-to-speech. Requires API key in settings.
 final class ElevenLabsService {
     private let session: URLSession
+    private let maxTextLength = 500
 
     init(session: URLSession = .shared) {
         self.session = session
@@ -31,19 +32,33 @@ final class ElevenLabsService {
             throw ElevenLabsError.missingAPIKey
         }
 
-        let cached = cacheURL(for: text, voiceID: settings.elevenLabsVoiceID)
+        let sanitized = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !sanitized.isEmpty, sanitized.count <= maxTextLength else {
+            throw ElevenLabsError.invalidResponse
+        }
+        guard settings.elevenLabsVoiceID.count <= 64,
+              settings.elevenLabsVoiceID.allSatisfy({ $0.isLetter || $0.isNumber })
+        else {
+            throw ElevenLabsError.invalidResponse
+        }
+
+        let cached = cacheURL(for: sanitized, voiceID: settings.elevenLabsVoiceID)
         if FileManager.default.fileExists(atPath: cached.path) {
             return cached
         }
 
-        var request = URLRequest(url: URL(string: "https://api.elevenlabs.io/v1/text-to-speech/\(settings.elevenLabsVoiceID)")!)
+        guard let url = URL(string: "https://api.elevenlabs.io/v1/text-to-speech/\(settings.elevenLabsVoiceID)") else {
+            throw ElevenLabsError.invalidResponse
+        }
+        var request = URLRequest(url: url)
         request.httpMethod = "POST"
+        request.timeoutInterval = 60
         request.setValue(settings.elevenLabsAPIKey, forHTTPHeaderField: "xi-api-key")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("audio/mpeg", forHTTPHeaderField: "Accept")
 
         let body: [String: Any] = [
-            "text": text,
+            "text": sanitized,
             "model_id": "eleven_multilingual_v2",
             "voice_settings": [
                 "stability": 0.75,

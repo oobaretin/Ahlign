@@ -32,6 +32,7 @@ enum ElevenLabsDefaults {
 struct AppSettings: Codable {
     var voiceEnabled: Bool = true
     var useElevenLabs: Bool = false
+    /// In-memory only; never encoded to UserDefaults (see Keychain / VoiceSecrets).
     var elevenLabsAPIKey: String = ""
     var elevenLabsVoiceID: String = ElevenLabsDefaults.voiceID
     var pulseIntervalWhenMuted: TimeInterval = 4.0
@@ -39,6 +40,29 @@ struct AppSettings: Codable {
     var defaultRepetitionsPerChakra: Int = 7
     /// Pause between affirmations (seconds), after voice or during silent mode.
     var affirmationIntervalSeconds: Double = 2.0
+
+    enum CodingKeys: String, CodingKey {
+        case voiceEnabled
+        case useElevenLabs
+        case elevenLabsVoiceID
+        case pulseIntervalWhenMuted
+        case tapToAdvance
+        case defaultRepetitionsPerChakra
+        case affirmationIntervalSeconds
+    }
+
+    mutating func hydrateCredentialFromSecureStores() {
+        let bundled = VoiceSecrets.elevenLabsAPIKey
+        let keychain = KeychainStorage.elevenLabsAPIKey() ?? ""
+        if !keychain.isEmpty {
+            elevenLabsAPIKey = keychain
+        } else if !bundled.isEmpty {
+            elevenLabsAPIKey = bundled
+            useElevenLabs = true
+        } else {
+            elevenLabsAPIKey = ""
+        }
+    }
 }
 
 struct SessionStats: Codable {
@@ -59,11 +83,29 @@ enum SessionStore {
     }
 
     static func saveConfigurations(_ configs: [ChakraConfiguration]) {
-        guard let data = try? JSONEncoder().encode(configs) else { return }
+        let sanitized = configs.map { config -> ChakraConfiguration in
+            var c = config
+            c.repetitionCount = min(99, max(1, c.repetitionCount))
+            if AffirmationLibrary.affirmations(for: c.step).first(where: { $0.id == c.selectedAffirmationID }) == nil {
+                c.selectedAffirmationID = AffirmationLibrary.affirmations(for: c.step)[0].id
+            }
+            return c
+        }
+        guard let data = try? JSONEncoder().encode(sanitized) else { return }
         UserDefaults.standard.set(data, forKey: configKey)
     }
 
     static func loadSettings() -> AppSettings {
+        var migratedLegacyKey = false
+        if let data = UserDefaults.standard.data(forKey: settingsKey),
+           let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let legacyKey = json["elevenLabsAPIKey"] as? String,
+           !legacyKey.isEmpty,
+           KeychainStorage.elevenLabsAPIKey() == nil {
+            KeychainStorage.setElevenLabsAPIKey(legacyKey)
+            migratedLegacyKey = true
+        }
+
         var settings: AppSettings
         if let data = UserDefaults.standard.data(forKey: settingsKey),
            let decoded = try? JSONDecoder().decode(AppSettings.self, from: data) {
@@ -78,19 +120,23 @@ enum SessionStore {
             needsSave = true
         }
 
-        let bundledKey = VoiceSecrets.elevenLabsAPIKey
-        if !bundledKey.isEmpty {
-            settings.elevenLabsAPIKey = bundledKey
-            settings.useElevenLabs = true
-            needsSave = true
-        }
+        settings.hydrateCredentialFromSecureStores()
+        if migratedLegacyKey { needsSave = true }
 
         if needsSave { saveSettings(settings) }
         return settings
     }
 
     static func saveSettings(_ settings: AppSettings) {
-        guard let data = try? JSONEncoder().encode(settings) else { return }
+        #if DEBUG
+        if !settings.elevenLabsAPIKey.isEmpty {
+            KeychainStorage.setElevenLabsAPIKey(settings.elevenLabsAPIKey)
+        }
+        #endif
+
+        var storable = settings
+        storable.elevenLabsAPIKey = ""
+        guard let data = try? JSONEncoder().encode(storable) else { return }
         UserDefaults.standard.set(data, forKey: settingsKey)
     }
 

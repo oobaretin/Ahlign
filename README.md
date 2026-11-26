@@ -17,11 +17,13 @@ Guided **Root → Crown** chakra meditation for iOS. Pick affirmations and repet
 
 ## ElevenLabs (shipping)
 
-End users do not see API keys in Settings. For **Release**, set a build-time Info key:
+End users do not see API keys in Settings. The target is already linked to **`Configuration/Secrets.xcconfig`** (gitignored):
 
-- Target **AffirmApp** → Build Settings → add User-Defined `INFOPLIST_KEY_ElevenLabsAPIKey` = your key (or use an xcconfig), **do not commit the key**.
+1. Open `Configuration/Secrets.xcconfig` and set `INFOPLIST_KEY_ElevenLabsAPIKey = your_key_here` (no quotes).
+2. Rebuild the app. Premium voice turns on automatically when the key is non-empty.
+3. **Debug:** you can still paste a key in Settings; it is stored in **Keychain**, not UserDefaults.
 
-**Voice ID** defaults to `45UYeUCUrGxt4rWuj2Ir`. **Debug** builds still show an optional ElevenLabs section in Settings.
+**Voice ID** defaults to `45UYeUCUrGxt4rWuj2Ir`. Never commit `Secrets.xcconfig`.
 
 Audio is cached under the app caches directory.
 
@@ -47,6 +49,9 @@ affirmapp/
     └── Resources/Assets.xcassets
 ```
 
-## Privacy
+## Security & privacy
 
-ElevenLabs requests send affirmation text to ElevenLabs’ API when enabled. Keys are stored locally in `UserDefaults` (use Keychain for production hardening).
+- Native **iOS** app only: no server database, login, or multi-user data.
+- **ElevenLabs:** affirmation text is sent to `api.elevenlabs.io` over HTTPS when premium voice is on.
+- **API keys:** Not written to UserDefaults; debug keys use **Keychain**. Release builds may use `Configuration/Secrets.example.xcconfig` → `Secrets.xcconfig` (gitignored). Keys embedded in the app binary can still be extracted—use a **backend TTS proxy** for high-assurance shipping.
+- Never commit `Secrets.xcconfig`, `.env`, or live API keys.
