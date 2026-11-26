@@ -1,8 +1,10 @@
 import SwiftUI
 
 struct HomeView: View {
+    @EnvironmentObject private var subscriptions: SubscriptionManager
     @StateObject private var viewModel = SessionViewModel()
     @State private var showSession = false
+    @State private var showPaywall = false
     @State private var showOnboarding = OnboardingStore.shouldShow
     @State private var showSplash = !OnboardingStore.shouldShow
     @State private var homePulse = 0.65
@@ -32,9 +34,20 @@ struct HomeView: View {
                 MeditationPlayerView(viewModel: viewModel)
             }
             .fullScreenCover(isPresented: $showOnboarding) {
-                OnboardingView(isPresented: $showOnboarding, onComplete: {})
+                OnboardingView(isPresented: $showOnboarding, onComplete: {
+                    if !subscriptions.hasPremiumAccess {
+                        showPaywall = true
+                    }
+                })
+            }
+            .sheet(isPresented: $showPaywall) {
+                PaywallView(subscriptions: subscriptions)
+            }
+            .onChange(of: subscriptions.hasPremiumAccess) { _, hasAccess in
+                viewModel.hasPremiumAccess = hasAccess
             }
             .onAppear {
+                viewModel.hasPremiumAccess = subscriptions.hasPremiumAccess
                 if showSplash {
                     Task {
                         try? await Task.sleep(for: .milliseconds(1400))
@@ -129,6 +142,11 @@ struct HomeView: View {
 
     private func beginJourney() {
         guard !isEnteringJourney else { return }
+        viewModel.hasPremiumAccess = subscriptions.hasPremiumAccess
+        guard subscriptions.hasPremiumAccess else {
+            showPaywall = true
+            return
+        }
         isEnteringJourney = true
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
 

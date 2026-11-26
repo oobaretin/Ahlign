@@ -27,11 +27,11 @@ final class AffirmationAudioPlayer: NSObject, ObservableObject {
         try? AVAudioSession.sharedInstance().setActive(true)
     }
 
-    func speak(text: String, settings: AppSettings) async -> SpeakResult {
+    func speak(text: String, settings: AppSettings, hasPremiumAccess: Bool) async -> SpeakResult {
         isSpeaking = true
         defer { isSpeaking = false }
 
-        if settings.voiceEnabled, settings.useElevenLabs, !settings.elevenLabsAPIKey.isEmpty {
+        if settings.voiceEnabled, hasPremiumAccess, settings.useElevenLabs, !settings.elevenLabsAPIKey.isEmpty {
             do {
                 let url = try await elevenLabs.synthesize(text: text, settings: settings)
                 try await playFile(url: url)

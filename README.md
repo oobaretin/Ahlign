@@ -27,6 +27,15 @@ End users do not see API keys in Settings. The target is already linked to **`Co
 
 Audio is cached under the app caches directory.
 
+## Subscriptions (StoreKit 2)
+
+Local testing uses **`Configuration/Products.storekit`** (3-day free trial on monthly & yearly). In **App Store Connect**, create subscription group `ahlign_premium` with matching product IDs:
+
+- `com.affirmapp.ChakraAffirmations.premium.monthly` — **3-day free trial**, then monthly
+- `com.affirmapp.ChakraAffirmations.premium.yearly` — **3-day free trial**, then yearly
+
+**Begin journey** and **ElevenLabs voice** require an active subscription or trial. Sandbox Apple ID for purchase testing.
+
 ## Flow
 
 1. **Home** — preview figure, **Begin journey**

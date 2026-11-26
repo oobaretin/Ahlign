@@ -1,10 +1,28 @@
 import SwiftUI
 
 struct SettingsView: View {
+    @EnvironmentObject private var subscriptions: SubscriptionManager
     @ObservedObject var viewModel: SessionViewModel
+    @State private var showPaywall = false
 
     var body: some View {
         List {
+            Section {
+                if subscriptions.hasPremiumAccess {
+                    Label("Premium active", systemImage: "checkmark.seal.fill")
+                        .foregroundStyle(.green)
+                } else {
+                    Button("Start 3-day free trial") {
+                        showPaywall = true
+                    }
+                }
+                Button("Restore purchases") {
+                    Task { await subscriptions.restorePurchases() }
+                }
+            } header: {
+                Text("Subscription")
+            }
+
             Section {
                 Toggle("Voice during session", isOn: $viewModel.settings.voiceEnabled)
                 Toggle("Tap to advance repetition", isOn: $viewModel.settings.tapToAdvance)
@@ -63,5 +81,14 @@ struct SettingsView: View {
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
         .onDisappear { viewModel.saveSetup() }
+        .sheet(isPresented: $showPaywall) {
+            PaywallView(subscriptions: subscriptions)
+        }
+        .task {
+            viewModel.hasPremiumAccess = subscriptions.hasPremiumAccess
+        }
+        .onChange(of: subscriptions.hasPremiumAccess) { _, hasAccess in
+            viewModel.hasPremiumAccess = hasAccess
+        }
     }
 }

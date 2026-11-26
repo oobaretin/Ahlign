@@ -18,6 +18,7 @@ final class SessionViewModel: ObservableObject {
     @Published var statusBanner: String?
     @Published var isPreparing = false
     @Published var isPaused = false
+    @Published var hasPremiumAccess = false
 
     let audioPlayer = AffirmationAudioPlayer()
     private var pulseTask: Task<Void, Never>?
@@ -151,7 +152,11 @@ final class SessionViewModel: ObservableObject {
 
             if skipCurrentRepetition { continue }
 
-            let result = await audioPlayer.speak(text: config.affirmation.english, settings: settings)
+            let result = await audioPlayer.speak(
+                text: config.affirmation.english,
+                settings: settings,
+                hasPremiumAccess: hasPremiumAccess
+            )
             showSpeakStatus(result)
 
             if skipCurrentRepetition { continue }
