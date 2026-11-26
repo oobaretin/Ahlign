@@ -34,7 +34,7 @@ Local testing uses **`Configuration/Products.storekit`** (3-day free trial on mo
 - `com.affirmapp.ChakraAffirmations.premium.monthly` — **3-day free trial**, then monthly
 - `com.affirmapp.ChakraAffirmations.premium.yearly` — **3-day free trial**, then yearly
 
-**Begin journey** and **ElevenLabs voice** require an active subscription or trial. Sandbox Apple ID for purchase testing.
+Default local test prices: **$9.99/month**, **$59.99/year** (set the same in App Store Connect). **Begin journey** and **ElevenLabs voice** require an active subscription or trial. Sandbox Apple ID for purchase testing.
 
 ## Flow
 

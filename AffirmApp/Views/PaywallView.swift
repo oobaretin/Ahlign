@@ -19,10 +19,14 @@ struct PaywallView: View {
 
                 ScrollView {
                     VStack(spacing: DesignTokens.sectionSpacing) {
-                        Image(systemName: "sparkles")
-                            .font(.system(size: 44, weight: .light))
-                            .foregroundStyle(DesignTokens.accentPurple)
+                        Image("AppLogo")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 96, height: 96)
+                            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                            .shadow(color: DesignTokens.accentPurple.opacity(0.35), radius: 16, y: 6)
                             .padding(.top, 8)
+                            .accessibilityLabel("Ahlign")
 
                         Text("Ahlign Premium")
                             .font(DesignTokens.Typography.screenTitle)
